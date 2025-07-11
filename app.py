@@ -33,10 +33,35 @@ df_apostas = carregar_apostas()
 st.dataframe(df_apostas)
 
 
-
-###Dashboard e métricas
 import plotly.express as px
 import pandas as pd
+### filtros do dashboard
+st.subheader("🧮 Filtros")
+
+if not df_apostas.empty:
+    df = df_apostas.copy()
+    df["data"] = pd.to_datetime(df["data"])
+
+    # Filtro de data
+    min_data = df["data"].min().date()
+    max_data = df["data"].max().date()
+
+    data_inicio, data_fim = st.date_input("Período", value=(min_data, max_data))
+
+    # Filtro de mercado
+    mercados = df["mercado"].unique().tolist()
+    mercado_selecionado = st.multiselect("Mercados", mercados, default=mercados)
+
+    # Aplicar filtros
+    df = df[
+        (df["data"] >= pd.to_datetime(data_inicio)) &
+        (df["data"] <= pd.to_datetime(data_fim)) &
+        (df["mercado"].isin(mercado_selecionado))
+    ]
+
+
+
+###Dashboard e métricas
 
 st.subheader("📊 Análise de Desempenho")
 
