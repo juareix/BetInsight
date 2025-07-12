@@ -12,16 +12,19 @@ def get_matches(competition_code="PL", season="2024"):
     else:
         return []
 
-
-
-#Função para pegar os ultimso resultados dos times:
-def get_last_matches_by_team(team_id, limit=5):
-    url = f"https://api.football-data.org/v4/teams/{team_id}/matches?status=FINISHED&limit={limit}"
+def get_last_matches_by_team(team_id, season="2023", limit=5):
+    url = f"https://api.football-data.org/v4/teams/{team_id}/matches?status=FINISHED&limit={limit}&season={season}"
     response = requests.get(url, headers=HEADERS)
+
+    print(f"Status: {response.status_code}")
+    print(response.text)
+
     if response.status_code == 200:
         return response.json().get("matches", [])
     else:
         return []
+
+
 
 #Função get pra busca por competição
 def get_teams_by_competition(competition_code):
