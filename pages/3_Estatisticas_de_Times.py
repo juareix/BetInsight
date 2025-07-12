@@ -1,47 +1,35 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-from datetime import date
 from api import get_teams_by_competition, get_last_matches_by_team
-#################################################################
-####### Modulo de busca de estatistica de times #########
+from utils import partidas_para_df, calcular_medias_gols
 
-st.subheader("📊 Estatísticas de Times (últimos jogos)")
+st.set_page_config(page_title="📈 Estatísticas de Times", page_icon="📊")
+st.title("📈 Estatísticas de Times")
 
-competicao_estat = st.selectbox("Selecione a competição", ["PL", "SA", "BL1", "PD", "FL1"], key="estat")
+# Seleção da competição
+comp = st.selectbox("Selecione a competição", ["PL", "PD", "SA", "FL1", "BL1"])  # Premier, La Liga, Série A...
 
-if st.button("Buscar times"):
-    times = get_teams_by_competition(competicao_estat)
-    nome_times = [t["name"] for t in times]
-    time_selecionado = st.selectbox("Escolha o time", nome_times)
+# Carrega times da competição
+times = get_teams_by_competition(comp)
+nomes = [t["name"] for t in times]
+time_escolhido = st.selectbox("Escolha o time", nomes)
 
-    team_info = next((t for t in times if t["name"] == time_selecionado), None)
+# Seleção de temporada
+temporadas = ["2024", "2023", "2022"]
+temporada = st.selectbox("Temporada", temporadas)
 
-    temporadas_disponiveis = ["2024", "2023", "2022", "2021"]
-    temporada_selecionada = st.selectbox("Temporada", temporadas_disponiveis, index=0)
+# Botão para buscar estatísticas
+if st.button("Buscar estatísticas"):
+    time = next(t for t in times if t["name"] == time_escolhido)
+    partidas = get_last_matches_by_team(time["id"], season=temporada, limit=10)
+    
+    if not partidas:
+        st.warning("Nenhuma partida encontrada para esse time nessa temporada.")
+    else:
+        df = partidas_para_df(partidas, time["id"])
+        media_pro, media_contra = calcular_medias_gols(df)
 
+        st.metric("⚽ Média de Gols Marcados", f"{media_pro:.2f}")
+        st.metric("🥅 Média de Gols Sofridos", f"{media_contra:.2f}")
 
-    if team_info:
-        partidas = get_last_matches_by_team(team_info["id"], season=temporada_selecionada)
-        if partidas:
-            df_partidas = pd.DataFrame([{
-                "Data": m["utcDate"][:10],
-                "Adversário": (
-                    m["homeTeam"]["name"] if m["awayTeam"]["id"] == team_info["id"]
-                    else m["awayTeam"]["name"]
-                ),
-                "Local": "Casa" if m["homeTeam"]["id"] == team_info["id"] else "Fora",
-                "Placar": f'{m["score"]["fullTime"]["home"]} x {m["score"]["fullTime"]["away"]}',
-                "Resultado": (
-                    "Ganhou" if (
-                        (m["homeTeam"]["id"] == team_info["id"] and m["score"]["winner"] == "HOME_TEAM") or
-                        (m["awayTeam"]["id"] == team_info["id"] and m["score"]["winner"] == "AWAY_TEAM")
-                    ) else ("Empatou" if m["score"]["winner"] == "DRAW" else "Perdeu")
-                )
-            } for m in partidas])
-            st.dataframe(df_partidas)
-        else:
-            st.warning("Não foi possível buscar os últimos jogos.")
-
-
-#################################################################
+        st.dataframe(df)
